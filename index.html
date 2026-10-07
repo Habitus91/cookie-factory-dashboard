@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="googlebot" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>쿠키공장 매출 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f4f3f0; --surface:#fcfcfb; --border:#e4e2dc; --grid:#ecebe7;
+  --text-1:#0b0b0b; --text-2:#52514e; --text-3:#8a8984;
+  /* 의미별 색: 매출=파랑 · 이익=초록/검정 · 비용=따뜻한 색 · 구분(상품·경로·고객)=c1~c5 */
+  --sales:#2a78d6; --salesL:#9ec5f4; --profit:#1baf7a; --op:#0b0b0b;
+  --cogs:#eb6834; --fee:#8e4f14; --fix:#eda100; --mgmt:#c43c3b; --mkt:#e87ba4;
+  --c1:#4a3aa7; --c2:#8a8a00; --c3:#9b4f96; --c4:#008300; --c5:#0891b2; --season:#2f7f86;
+  --up:#1a7f4b; --down:#c43c3b; --accent:#8a5a2b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#121211; --surface:#1a1a19; --border:#2e2e2b; --grid:#2a2a27;
+    --text-1:#ffffff; --text-2:#c3c2b7; --text-3:#8d8c84;
+    --sales:#3987e5; --salesL:#9ec5f4; --profit:#199e70; --op:#ffffff;
+    --cogs:#e0703a; --fee:#97561f; --fix:#c98500; --mgmt:#d64545; --mkt:#b86ad6;
+    --c1:#8378e0; --c2:#8f8f00; --c3:#b0609f; --c4:#1f9a1f; --c5:#0e8fb0; --season:#3a9aa2;
+    --up:#4cc38a; --down:#e66767; --accent:#d9a066;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121211; --surface:#1a1a19; --border:#2e2e2b; --grid:#2a2a27;
+  --text-1:#ffffff; --text-2:#c3c2b7; --text-3:#8d8c84;
+  --sales:#3987e5; --salesL:#9ec5f4; --profit:#199e70; --op:#ffffff;
+  --cogs:#e0703a; --fee:#97561f; --fix:#c98500; --mgmt:#d64545; --mkt:#b86ad6;
+  --c1:#8378e0; --c2:#8f8f00; --c3:#b0609f; --c4:#1f9a1f; --c5:#0e8fb0; --season:#3a9aa2;
+  --up:#4cc38a; --down:#e66767; --accent:#d9a066;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text-1);
+  font-family:"Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.5}
+.wrap{max-width:1400px;margin:0 auto;padding:28px 32px 48px;min-width:1100px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:20px}
+h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.meta{color:var(--text-2);font-size:13px;margin-top:4px}
+.controls{display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:4px;margin-top:14px}
+.tab{border:1px solid var(--border);background:var(--surface);color:var(--text-2);padding:8px 16px;border-radius:8px;font:inherit;font-size:13.5px;cursor:pointer}
+.tab.on{background:var(--text-1);color:var(--surface);border-color:var(--text-1);font-weight:500}
+.theme-btn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);width:34px;height:34px;border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.theme-btn:hover,.tab:hover{border-color:var(--text-3)}
+.filterbar{display:flex;align-items:center;gap:12px;margin:4px 0 14px}
+.filterbar .fl{font-weight:700;font-size:13.5px}
+.filterbar .fh{color:var(--text-3);font-size:12.5px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--text-2);padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--border)}
+.seg button.on{background:var(--text-1);color:var(--surface);font-weight:500}
+.icon-btn{border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:8px;padding:7px 10px;cursor:pointer;font:inherit;font-size:13px}
+.alert{padding:10px 16px;margin-bottom:10px;border-radius:10px;font-size:13.5px;border:1px solid}
+.alert b{margin-right:10px}
+details.alert summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+details.alert summary::-webkit-details-marker{display:none}
+details.alert .al-first{overflow:hidden;text-overflow:ellipsis;opacity:.85}
+details.alert .al-more{margin-left:auto;font-size:12px;opacity:.7}
+details.alert[open] .al-first{display:none}
+details.alert[open] .al-more{visibility:hidden}
+details.alert ul{margin:8px 0 2px;padding-left:4px;list-style:none}
+details.alert li{padding:3px 0}
+.alert.warn{background:#fff6e0;border-color:#f0d58c;color:#6b4a00}
+.alert.error{background:#fdeceb;border-color:#f0b4b1;color:#8a1f1c}
+:root[data-theme="dark"] .alert.warn{background:#2e2710;border-color:#6b5716;color:#f2d88a}
+:root[data-theme="dark"] .alert.error{background:#331817;border-color:#7a2e2b;color:#f4b3b0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .alert.warn{background:#2e2710;border-color:#6b5716;color:#f2d88a}
+:root:not([data-theme="light"]) .alert.error{background:#331817;border-color:#7a2e2b;color:#f4b3b0}}
+.cum{display:grid;grid-template-columns:repeat(3,1fr);align-items:stretch;gap:0;padding:0;margin-bottom:14px;overflow:hidden}
+.cum .ttl{grid-column:1/-1;padding:14px 22px 0 !important;border-left:0 !important;display:flex;gap:10px;align-items:baseline}
+.cum .ttl + div{border-left:0 !important}
+.cum > div{padding:18px 22px}
+.cum > div + div{border-left:1px solid var(--border)}
+.cum .ttl{font-weight:700;font-size:15px}
+.cum .ttl small{font-weight:400;color:var(--text-2);font-size:12.5px}
+.cum .lb{color:var(--text-2);font-size:13px}
+.cum .vl{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.cum .vl small{font-size:14px;font-weight:500;color:var(--text-2);margin-left:2px}
+.cum .vl.neg{color:var(--down)}
+.cum .rt{font-size:12.5px;color:var(--text-2);margin-top:2px}
+.live .lv-head{display:flex;gap:10px;align-items:baseline;margin-bottom:10px}
+.live .lv-sub{color:var(--text-2);font-size:13px}
+.live .lv-note{margin-left:auto;color:var(--text-3);font-size:12px}
+.live .lv-grid{display:grid;grid-template-columns:1fr 1.4fr 1.6fr;gap:24px;align-items:end}
+.live .lb{display:block;color:var(--text-2);font-size:12.5px}
+.live .lv-grid b{font-size:22px;color:var(--text-1)} .live .lv-grid .lb b{font-size:13px}
+.live small{display:block;color:var(--text-3);font-size:12px;margin-top:2px}
+.live .bar{position:relative;height:12px;background:var(--grid);border-radius:6px;margin:6px 0 4px}
+.live .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px}
+.live .bar em{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text-1)}
+.live .ok{color:var(--up)} .live .ng{color:var(--down)}
+.live .bar i.ok{background:var(--up)} .live .bar i.ng{background:var(--down)}
+.live{padding:11px 20px;margin-bottom:14px;font-size:13.5px;color:var(--text-2);border-left:4px solid var(--accent)}
+.live b{color:var(--text-1);font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+.kpi .label{color:var(--text-2);font-size:13px}
+.kpi .value{font-size:28px;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.kpi .value small{font-size:15px;font-weight:500;color:var(--text-2);margin-left:2px}
+.kpi .delta{font-size:12.5px;font-variant-numeric:tabular-nums}
+.delta.up{color:var(--up)} .delta.down{color:var(--down)} .delta.flat{color:var(--text-3)}
+.kpi .sub{font-size:12px;color:var(--text-3);margin-top:6px;border-top:1px dashed var(--border);padding-top:6px}
+.row{display:grid;gap:14px;margin-bottom:14px}
+.row.main{grid-template-columns:2fr 1fr}
+.kpis.four{grid-template-columns:repeat(4,1fr)}
+.mkt{margin-top:12px;padding:10px 12px;background:var(--bg);border-radius:8px;font-size:13px;color:var(--text-2)}
+.mkt b{color:var(--text-1)}
+.more-btn{margin-top:8px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);border-radius:8px;padding:5px 12px;font:inherit;font-size:12.5px;cursor:pointer}
+.row.two{grid-template-columns:1fr 1fr}
+.srow{display:grid;grid-template-columns:150px 1fr 170px;gap:12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--grid);font-size:13px}
+.srow:last-child{border-bottom:0}
+.srow .nm{font-weight:500} .srow .nm small{display:block;color:var(--text-3);font-weight:400;font-size:11.5px}
+.srow .bar{height:12px;background:var(--grid);border-radius:6px;position:relative}
+.srow .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;background:var(--season)}
+.srow .bar i.base{background:var(--text-3)}
+.srow .vl{text-align:right;font-variant-numeric:tabular-nums} .srow .vl small{color:var(--text-3);margin-left:4px}
+.srow.sub{grid-template-columns:150px 1fr 170px;padding:3px 0 3px 14px;border-bottom:0;color:var(--text-2);font-size:12px}
+.srow.sub .bar{height:6px}
+.bigstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.bigstats div{background:var(--bg);border-radius:8px;padding:10px 12px}
+.bigstats .lb{font-size:12px;color:var(--text-2)} .bigstats b{display:block;font-size:19px;margin-top:2px;font-variant-numeric:tabular-nums}
+.bigstats small{color:var(--text-3);font-size:11.5px}
+.row.three{grid-template-columns:repeat(3,1fr)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.card .desc{margin:2px 0 12px;color:var(--text-2);font-size:12.5px}
+.chart{position:relative;height:300px}
+.chart.tall{height:340px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 10px;font-size:12.5px;color:var(--text-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend i.dash{display:inline-block;width:16px;height:0;border-top:2px dashed var(--text-2);vertical-align:3px;margin-right:6px;background:none}
+.legend i.line{height:3px;border-radius:2px;vertical-align:3px;width:14px}
+.breakdown .bar{display:flex;height:34px;border-radius:6px;overflow:hidden;gap:2px;margin:6px 0 16px}
+.breakdown .bar div{height:100%}
+.breakdown table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.breakdown td{padding:7px 0;border-bottom:1px solid var(--grid);font-size:13.5px}
+.breakdown td:nth-child(2),.breakdown td:nth-child(3){text-align:right}
+.breakdown td:nth-child(3){color:var(--text-2);width:64px}
+.breakdown tr.total td{font-weight:700;border-bottom:0;border-top:1px solid var(--text-3)}
+.breakdown .note{font-size:12px;color:var(--text-3);margin-top:10px}
+table.detail{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+table.detail th{text-align:right;color:var(--text-2);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.detail th:first-child,table.detail td:first-child{text-align:left}
+table.detail td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--grid);white-space:nowrap}
+table.detail tr:hover td{background:var(--bg)}
+table.detail td.neg{color:var(--down)}
+.view-btn.on{background:var(--text-1);color:var(--surface);border-color:var(--text-1);font-weight:500}
+.range-label{font-size:12.5px;font-weight:400;color:var(--text-2);margin-left:6px}
+table.cost td small{color:var(--text-3);font-size:11.5px;margin-left:4px}
+table.cost td.over{color:var(--down);font-weight:700}
+table.cost td.name{font-weight:500;text-align:left}
+table.cost th:nth-child(2){text-align:left}
+#costNow th:nth-child(4){text-align:left}
+table.cost td.grp{color:var(--text-2);font-size:12px}
+.ratebar{position:relative;height:10px;background:var(--grid);border-radius:5px;min-width:220px}
+.ratebar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--sales)}
+.ratebar i.over{background:var(--down)}
+.ratebar b{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text-1)}
+.hist-item{padding:10px 0;border-bottom:1px solid var(--grid);font-size:13px}
+.hist-item:last-child{border-bottom:0}
+.hist-item .when{font-weight:700;margin-right:8px}
+.hist-item .prod{color:var(--text-2);margin-right:8px}
+.hist-item ul{margin:6px 0 0;padding-left:18px;color:var(--text-2)}
+.up-c{color:var(--down)} .down-c{color:var(--up)}
+.up-c2{color:var(--up)} .down-c2{color:var(--down)}
+.tag.warn{background:#fdecc8;color:#8a5a00}
+.kpi .value.neg{color:var(--down)}
+.breakdown td.neg{color:var(--down)}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--grid);color:var(--text-2);margin-left:6px}
+footer{margin-top:18px;color:var(--text-3);font-size:12px;line-height:1.7}
+footer b{color:var(--text-2);font-weight:500}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1><span>쿠키공장</span> 매출 · 이익 대시보드</h1>
+      <div class="meta" id="meta"></div>
+      <nav class="tabs" role="tablist">
+        <button class="tab on" data-view="dash" role="tab">📊 대시보드</button>
+        <button class="tab" data-view="cost" role="tab">₩ 원가표</button>
+        <button class="tab" data-view="cust" role="tab">👥 고객</button>
+      </nav>
+    </div>
+    <button class="theme-btn" id="theme" title="라이트/다크 테마 전환" aria-label="테마 전환"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+  </header>
+
+  <div id="alerts"></div>
+  <div id="viewDash">
+  <section class="card cum" id="cum"></section>
+  <div class="live card" id="live"></div>
+  <div class="filterbar"><span class="fl">기간</span><div class="seg range-seg">
+        <button data-n="6">최근 6개월</button><button data-n="12" class="on">최근 12개월</button><button data-n="0">전체</button>
+      </div><span class="fh">아래 카드·그래프·표에 적용</span></div>
+  <section class="kpis" id="kpis"></section>
+
+  <!-- ② 추이 -->
+    <div class="card" style="margin-bottom:14px">
+      <h2>월별 매출과 이익</h2>
+      <p class="desc">막대 = 매출(일반 + 대량 주문) · 초록 선 = 판매이익 · 진한 선 = 영업이익 · 점선 = BEP(손익분기 매출)</p>
+      <div class="legend"><span><i style="background:var(--sales)"></i>일반 주문 매출</span><span><i style="background:var(--salesL)"></i>대량 주문 매출 (<span id="bigTh"></span>)</span><span><i class="line" style="background:var(--profit)"></i>판매이익</span><span><i class="line" style="background:var(--op)"></i>영업이익</span><span><i class="line dash"></i>BEP <span id="bepLbl"></span></span></div>
+      <div class="chart tall"><canvas id="cMain"></canvas></div>
+    </div>
+  <section class="row main">
+    <div class="card">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <h2>연도별 같은 달 비교</h2>
+      <div class="seg" id="yoyMetric" style="margin-left:auto"><button data-k="매출" class="on">매출</button><button data-k="영업이익">영업이익</button><button data-k="판매이익">판매이익</button></div>
+    </div>
+    <p class="desc" id="yoyDesc">전체 기간 · 가로축 = 월, 막대 = 연도 (기간 버튼과 무관)</p>
+    <div class="legend" id="yoyLegend"></div>
+    <div class="chart"><canvas id="cYoy"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>상품 판매 구성</h2>
+      <p class="desc">월별 판매 수량 · 세트 상품 + 단품</p>
+      <div class="legend" id="setLegend"></div>
+      <div class="chart"><canvas id="cSet"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ③ 원인 -->
+  <section class="row main">
+    <div class="card">
+      <h2>비용 구성</h2>
+      <p class="desc">월별 전체 비용을 쌓은 막대 · 파란 점선 = 매출 · 막대가 점선보다 높은 달은 적자</p>
+      <div class="legend"><span><i style="background:var(--cogs)"></i>원가</span><span><i style="background:var(--fee)"></i>수수료·택배</span><span><i style="background:var(--fix)"></i>고정비</span><span><i style="background:var(--mgmt)"></i>관리비</span><span><i style="background:var(--mkt)"></i>마케팅·일회성</span><span><i class="dash" style="border-top-color:var(--sales)"></i>매출 (점선)</span></div>
+      <div class="chart tall"><canvas id="cCost"></canvas></div>
+    </div>
+    <div class="card breakdown">
+      <h2 id="bdTitle">매출은 어디로 갔나</h2>
+      <p class="desc">마감 월 매출을 100%로 봤을 때 비용과 영업이익</p>
+      <div class="bar" id="bdBar"></div>
+      <table id="bdTable"></table>
+      <div class="note" id="bdNote"></div>
+    </div>
+  </section>
+
+  <!-- ④ 시즌·대량 -->
+  <section class="row two">
+    <div class="card">
+      <h2>시즌별 매출 <span class="range-label" id="seasonRange"></span></h2>
+      <p class="desc" id="seasonDesc"></p>
+      <div id="seasonList"></div>
+    </div>
+    <div class="card">
+      <h2>대량 주문 의존도 <span class="range-label" id="bigRange"></span></h2>
+      <p class="desc">대량 주문 = 주문 1건 결제금액 <b id="bigTh2"></b> 이상 · BEP <b id="bepLbl2"></b></p>
+      <div class="bigstats" id="bigStats"></div>
+      <div style="overflow-x:auto"><table class="detail" id="bigTable"></table></div>
+      <button class="more-btn" id="bigMore"></button>
+    </div>
+  </section>
+
+  <!-- ⑤ 누적 -->
+  <section class="card" style="margin-bottom:14px">
+    <h2>누적 영업이익</h2>
+    <p class="desc" id="cumDesc"></p>
+    <div class="legend"><span><i class="line" style="background:var(--op)"></i>누적 흑자 구간</span><span><i class="line" style="background:var(--down)"></i>누적 적자 구간</span><span><i style="background:var(--grid)"></i>월 영업이익</span></div>
+    <div class="chart"><canvas id="cCum"></canvas></div>
+  </section>
+
+  <section class="card">
+    <h2>월별 상세</h2>
+    <p class="desc">단위: 원 · 취소/반품 제외 · 변동비 = 관리비 + 마케팅 + 일회성 + 기타</p>
+    <div style="overflow-x:auto"><table class="detail" id="detail"></table></div>
+  </section>
+  </div>
+
+  <div id="viewCust" hidden>
+    <div class="filterbar"><span class="fl">기간</span><div class="seg range-seg">
+        <button data-n="6">최근 6개월</button><button data-n="12" class="on">최근 12개월</button><button data-n="0">전체</button>
+      </div><span class="fh">아래 카드·그래프·표에 적용</span></div>
+    <section class="kpis four" id="custKpis"></section>
+    <section class="row two">
+      <div class="card">
+        <h2>월별 신규 · 재구매 고객</h2>
+        <p class="desc">구매 고객 수 (취소·반품 제외) · 재구매 = 이전에 한 번이라도 산 적 있는 고객</p>
+        <div class="legend"><span><i style="background:var(--c1)"></i>신규 고객</span><span><i style="background:var(--c4)"></i>재구매 고객</span></div>
+        <div class="chart"><canvas id="cCust"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>유입 경로 <span class="range-label" id="inRange"></span></h2>
+        <p class="desc">주문 1건 = 메인 상품의 유입 경로 · 네이버 분류를 5개로 묶음</p>
+        <div id="inflowList"></div>
+        <div class="mkt" id="mktEff"></div>
+      </div>
+    </section>
+    <section class="card" style="margin-bottom:14px">
+      <h2>유입 경로 월별 추이</h2>
+      <p class="desc">경로별 주문 수</p>
+      <div class="legend" id="inLegend"></div>
+      <div class="chart"><canvas id="cInflow"></canvas></div>
+    </section>
+    <section class="card">
+      <h2>고객 월별 상세</h2>
+      <p class="desc">1인당 구매금액 = 매출 ÷ 구매 고객 수 · 경로별 칸 = 주문 수</p>
+      <div style="overflow-x:auto"><table class="detail" id="custTable"></table></div>
+    </section>
+  </div>
+
+  <div id="viewCost" hidden>
+    <section class="card">
+      <h2>① 현재 적용 원가</h2>
+      <p class="desc">상품 1개(세트 1개)를 만들 때 들어가는 원가 · config/cost.json 기준 · 레시피(재료 사용량)는 표시하지 않음</p>
+      <div style="overflow-x:auto"><table class="detail cost" id="costNow"></table></div>
+    </section>
+
+    <div class="filterbar"><span class="fl">기간</span><div class="seg range-seg">
+        <button data-n="6">최근 6개월</button><button data-n="12" class="on">최근 12개월</button><button data-n="0">전체</button>
+      </div><span class="fh">아래 카드·그래프·표에 적용</span></div>
+    <section class="card">
+      <h2>② 상품별 원가율 <span class="range-label" id="rateRange"></span></h2>
+      <p class="desc">원가 ÷ 매출 · 세로선 = 기준 <b id="thLabel"></b> · 기준을 넘으면 빨간색으로 표시</p>
+      <div style="overflow-x:auto"><table class="detail cost" id="costRate"></table></div>
+    </section>
+
+    <section class="row main">
+      <div class="card">
+        <h2>③ 월별 원가 상세</h2>
+        <p class="desc">상품별 원가 = 판매 수량 × 개당 원가 · 막대에 마우스를 올리면 금액 확인</p>
+        <div class="legend" id="costLegend"></div>
+        <div class="chart tall"><canvas id="cCostProd"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>④ 원가 변경 이력</h2>
+        <p class="desc">cost.json 에 적용시작월이 추가될 때마다 기록</p>
+        <div id="costHist"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>③ 월별 원가 상세 · 표</h2>
+      <p class="desc">셀 = 원가 (수량 × 개당 원가) · 단위: 원</p>
+      <div style="overflow-x:auto"><table class="detail cost" id="costMonthly"></table></div>
+    </section>
+  </div>
+
+  <footer>
+    <b>계산 기준</b> · 매출 = 정상 주문 실결제금액 합(취소·반품 제외) · 원가 = 세트 수 × 세트당 원가 + 낱개 추가 쿠키 × 쿠키 원가 (config/cost.json)
+    · 수수료 = 결제·판매·연동 수수료 · 택배순부담 = 택배 주문 수 × 3,000원 − 고객 납부 배송비<br>
+    · 판매이익 = 매출 − 원가 − 수수료 − 택배순부담 · 영업이익 = 판매이익 − 고정비 − 변동비(관리비·마케팅·일회성·기타, input/수동입력.xlsx)
+    · 데이터 출처: 스토어 API + 수동 입력 · 생성 2026-10-07 15:54
+  </footer>
+</div>
+
+<script>
+const DATA = [{"ym": "202506", "마지막주문일": "2025-06-30", "주문건수": 12, "취소반품건수": 0, "매출": 281020, "원가": 104388, "수수료": 18621, "택배순부담": -4000, "판매이익": 162011, "판매이익률": 0.5765, "객단가": 23418, "고정비": 230000, "관리비": 121100, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -189089, "영업이익률": -0.6729, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 20, "세트_4구선물": 4, "세트_개별포장": 0, "낱개추가쿠키": 0, "택배건수": 8, "픽업건수": 4, "정산입금액": 220573, "단품판매": {}, "상품별": {"4구 선물": {"수량": 4, "매출": 59360, "원가": 20688}, "3구 선물": {"수량": 20, "매출": 221660, "원가": 83700}}, "대량매출": 0, "대량건수": 0, "시즌별": {"상시": {"매출": 281020, "주문": 12}}, "고객수": 9, "신규고객": 9, "재구매고객": 0, "재구매매출": 67440, "유입": {"네이버 검색": {"주문": 9, "매출": 224820}, "네이버쇼핑 외": {"주문": 1, "매출": 11240}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 2, "매출": 44960}, "장바구니·기타": {"주문": 0, "매출": 0}}}, {"ym": "202507", "마지막주문일": "2025-07-30", "주문건수": 29, "취소반품건수": 0, "매출": 882440, "원가": 334047, "수수료": 53805, "택배순부담": -25000, "판매이익": 519588, "판매이익률": 0.5888, "객단가": 30429, "고정비": 230000, "관리비": 158300, "마케팅": 139400, "일회성": 0, "기타비용": 0, "영업이익": -8112, "영업이익률": -0.0092, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 62, "세트_4구선물": 13, "세트_개별포장": 2, "낱개추가쿠키": 1, "택배건수": 22, "픽업건수": 7, "정산입금액": 783613, "단품판매": {}, "상품별": {"3구 선물": {"수량": 62, "매출": 670770, "원가": 259470}, "4구 선물": {"수량": 13, "매출": 187720, "원가": 67236}, "개별포장": {"수량": 2, "매출": 20350, "원가": 6282}, "낱개 추가": {"수량": 1, "매출": 3600, "원가": 1059}}, "대량매출": 155890, "대량건수": 1, "시즌별": {"상시": {"매출": 882440, "주문": 29}}, "고객수": 19, "신규고객": 16, "재구매고객": 3, "재구매매출": 246770, "유입": {"네이버 검색": {"주문": 12, "매출": 365770}, "네이버쇼핑 외": {"주문": 5, "매출": 165590}, "마케팅 링크": {"주문": 4, "매출": 233420}, "네이버페이·홈": {"주문": 6, "매출": 92150}, "장바구니·기타": {"주문": 2, "매출": 25510}}}, {"ym": "202508", "마지막주문일": "2025-08-31", "주문건수": 33, "취소반품건수": 0, "매출": 480050, "원가": 179577, "수수료": 21947, "택배순부담": -9500, "판매이익": 288026, "판매이익률": 0.6, "객단가": 14547, "고정비": 230000, "관리비": 162200, "마케팅": 139400, "일회성": 0, "기타비용": 0, "영업이익": -243574, "영업이익률": -0.5074, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 31, "세트_4구선물": 0, "세트_개별포장": 15, "낱개추가쿠키": 3, "택배건수": 33, "픽업건수": 0, "정산입금액": 288257, "단품판매": {}, "상품별": {"3구 선물": {"수량": 31, "매출": 322220, "원가": 129735}, "개별포장": {"수량": 15, "매출": 147030, "원가": 47115}, "낱개 추가": {"수량": 3, "매출": 10800, "원가": 2727}}, "대량매출": 0, "대량건수": 0, "시즌별": {"상시": {"매출": 480050, "주문": 33}}, "고객수": 29, "신규고객": 25, "재구매고객": 4, "재구매매출": 168880, "유입": {"네이버 검색": {"주문": 14, "매출": 184780}, "네이버쇼핑 외": {"주문": 13, "매출": 173750}, "마케팅 링크": {"주문": 2, "매출": 21580}, "네이버페이·홈": {"주문": 3, "매출": 59720}, "장바구니·기타": {"주문": 1, "매출": 40220}}}, {"ym": "202509", "마지막주문일": "2025-09-25", "주문건수": 11, "취소반품건수": 1, "매출": 332420, "원가": 123478, "수수료": 15729, "택배순부담": 2000, "판매이익": 191213, "판매이익률": 0.5752, "객단가": 30220, "고정비": 230000, "관리비": 166200, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -204987, "영업이익률": -0.6167, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 10, "세트_4구선물": 10, "세트_개별포장": 8, "낱개추가쿠키": 5, "택배건수": 10, "픽업건수": 1, "정산입금액": 828091, "단품판매": {}, "상품별": {"3구 선물": {"수량": 10, "매출": 102650, "원가": 41850}, "4구 선물": {"수량": 10, "매출": 134200, "원가": 51720}, "개별포장": {"수량": 8, "매출": 77570, "원가": 25128}, "낱개 추가": {"수량": 5, "매출": 18000, "원가": 4780}}, "대량매출": 0, "대량건수": 0, "시즌별": {"상시": {"매출": 332420, "주문": 11}}, "고객수": 10, "신규고객": 7, "재구매고객": 3, "재구매매출": 118660, "유입": {"네이버 검색": {"주문": 4, "매출": 155570}, "네이버쇼핑 외": {"주문": 4, "매출": 99690}, "마케팅 링크": {"주문": 1, "매출": 10100}, "네이버페이·홈": {"주문": 1, "매출": 56960}, "장바구니·기타": {"주문": 1, "매출": 10100}}}, {"ym": "202510", "마지막주문일": "2025-10-30", "주문건수": 5, "취소반품건수": 1, "매출": 91890, "원가": 30291, "수수료": 4538, "택배순부담": -1500, "판매이익": 58561, "판매이익률": 0.6373, "객단가": 18378, "고정비": 230000, "관리비": 135900, "마케팅": 136400, "일회성": 0, "기타비용": 0, "영업이익": -443739, "영업이익률": -4.829, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 3, "세트_4구선물": 1, "세트_개별포장": 4, "낱개추가쿠키": 0, "택배건수": 3, "픽업건수": 2, "정산입금액": 97650, "단품판매": {}, "상품별": {"3구 선물": {"수량": 3, "매출": 31920, "원가": 12555}, "4구 선물": {"수량": 1, "매출": 21440, "원가": 5172}, "개별포장": {"수량": 4, "매출": 38530, "원가": 12564}}, "대량매출": 0, "대량건수": 0, "시즌별": {"상시": {"매출": 91890, "주문": 5}}, "고객수": 3, "신규고객": 0, "재구매고객": 3, "재구매매출": 91890, "유입": {"네이버 검색": {"주문": 5, "매출": 91890}, "네이버쇼핑 외": {"주문": 0, "매출": 0}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 0, "매출": 0}, "장바구니·기타": {"주문": 0, "매출": 0}}}, {"ym": "202511", "마지막주문일": "2025-11-23", "주문건수": 30, "취소반품건수": 2, "매출": 1672260, "원가": 596213, "수수료": 78476, "택배순부담": 15000, "판매이익": 982571, "판매이익률": 0.5876, "객단가": 55742, "고정비": 230000, "관리비": 128700, "마케팅": 30000, "일회성": 0, "기타비용": 0, "영업이익": 593871, "영업이익률": 0.3551, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 57, "세트_4구선물": 34, "세트_개별포장": 56, "낱개추가쿠키": 6, "택배건수": 19, "픽업건수": 11, "정산입금액": 1436041, "단품판매": {}, "상품별": {"개별포장": {"수량": 56, "매출": 574000, "원가": 175896}, "낱개 추가": {"수량": 6, "매출": 21600, "원가": 5924}, "3구 선물": {"수량": 57, "매출": 602080, "원가": 238545}, "4구 선물": {"수량": 34, "매출": 474580, "원가": 175848}}, "대량매출": 1029100, "대량건수": 5, "시즌별": {"상시": {"매출": 897600, "주문": 17}, "수능": {"매출": 774660, "주문": 14}}, "고객수": 28, "신규고객": 28, "재구매고객": 0, "재구매매출": 41560, "유입": {"네이버 검색": {"주문": 10, "매출": 971090}, "네이버쇼핑 외": {"주문": 15, "매출": 549500}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 3, "매출": 111250}, "장바구니·기타": {"주문": 2, "매출": 40420}}}, {"ym": "202512", "마지막주문일": "2025-12-29", "주문건수": 18, "취소반품건수": 3, "매출": 911770, "원가": 322329, "수수료": 43245, "택배순부담": 13000, "판매이익": 533196, "판매이익률": 0.5848, "객단가": 50654, "고정비": 230000, "관리비": 147800, "마케팅": 30000, "일회성": 0, "기타비용": 0, "영업이익": 125396, "영업이익률": 0.1375, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 41, "세트_4구선물": 17, "세트_개별포장": 20, "낱개추가쿠키": 0, "택배건수": 16, "픽업건수": 2, "정산입금액": 948547, "단품판매": {}, "상품별": {"개별포장": {"수량": 20, "매출": 212800, "원가": 62820}, "3구 선물": {"수량": 41, "매출": 450810, "원가": 171585}, "4구 선물": {"수량": 17, "매출": 248160, "원가": 87924}}, "대량매출": 421070, "대량건수": 3, "시즌별": {"상시": {"매출": 439370, "주문": 7}, "크리스마스": {"매출": 472400, "주문": 12}}, "고객수": 17, "신규고객": 11, "재구매고객": 6, "재구매매출": 207040, "유입": {"네이버 검색": {"주문": 8, "매출": 511480}, "네이버쇼핑 외": {"주문": 4, "매출": 220810}, "마케팅 링크": {"주문": 2, "매출": 37340}, "네이버페이·홈": {"주문": 1, "매출": 28360}, "장바구니·기타": {"주문": 3, "매출": 113780}}}, {"ym": "202601", "마지막주문일": "2026-01-30", "주문건수": 11, "취소반품건수": 4, "매출": 646160, "원가": 230082, "수수료": 31995, "택배순부담": 17500, "판매이익": 366583, "판매이익률": 0.5673, "객단가": 58742, "고정비": 230000, "관리비": 158300, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -21717, "영업이익률": -0.0336, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 28, "세트_4구선물": 11, "세트_개별포장": 16, "낱개추가쿠키": 6, "택배건수": 7, "픽업건수": 4, "정산입금액": 573321, "단품판매": {}, "상품별": {"4구 선물": {"수량": 11, "매출": 160580, "원가": 56892}, "개별포장": {"수량": 16, "매출": 165450, "원가": 50256}, "낱개 추가": {"수량": 6, "매출": 21600, "원가": 5754}, "3구 선물": {"수량": 28, "매출": 298530, "원가": 117180}}, "대량매출": 249730, "대량건수": 2, "시즌별": {"상시": {"매출": 646160, "주문": 11}}, "고객수": 10, "신규고객": 4, "재구매고객": 6, "재구매매출": 349370, "유입": {"네이버 검색": {"주문": 3, "매출": 139850}, "네이버쇼핑 외": {"주문": 2, "매출": 46820}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 2, "매출": 249730}, "장바구니·기타": {"주문": 4, "매출": 209760}}}, {"ym": "202602", "마지막주문일": "2026-02-25", "주문건수": 46, "취소반품건수": 1, "매출": 1516920, "원가": 588855, "수수료": 74717, "택배순부담": 4000, "판매이익": 849348, "판매이익률": 0.5599, "객단가": 32977, "고정비": 230000, "관리비": 160800, "마케팅": 30000, "일회성": 0, "기타비용": 0, "영업이익": 428548, "영업이익률": 0.2825, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 81, "세트_4구선물": 37, "세트_개별포장": 18, "낱개추가쿠키": 2, "택배건수": 20, "픽업건수": 26, "정산입금액": 1501266, "단품판매": {}, "상품별": {"개별포장": {"수량": 18, "매출": 185120, "원가": 56538}, "3구 선물": {"수량": 81, "매출": 875730, "원가": 338985}, "4구 선물": {"수량": 37, "매출": 448870, "원가": 191364}, "낱개 추가": {"수량": 2, "매출": 7200, "원가": 1968}}, "대량매출": 392710, "대량건수": 2, "시즌별": {"상시": {"매출": 547920, "주문": 19}, "발렌타인": {"매출": 969000, "주문": 29}}, "고객수": 42, "신규고객": 34, "재구매고객": 8, "재구매매출": 617270, "유입": {"네이버 검색": {"주문": 15, "매출": 527190}, "네이버쇼핑 외": {"주문": 24, "매출": 844110}, "마케팅 링크": {"주문": 1, "매출": 21160}, "네이버페이·홈": {"주문": 2, "매출": 58740}, "장바구니·기타": {"주문": 4, "매출": 65720}}}, {"ym": "202603", "마지막주문일": "2026-03-31", "주문건수": 23, "취소반품건수": 2, "매출": 2213460, "원가": 807225, "수수료": 106925, "택배순부담": 17000, "판매이익": 1282310, "판매이익률": 0.5793, "객단가": 96237, "고정비": 230000, "관리비": 147970, "마케팅": 60000, "일회성": 0, "기타비용": 132200, "영업이익": 712140, "영업이익률": 0.3217, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 143, "세트_4구선물": 10, "세트_개별포장": 50, "낱개추가쿠키": 0, "택배건수": 22, "픽업건수": 1, "정산입금액": 757956, "단품판매": {}, "상품별": {"개별포장": {"수량": 50, "매출": 522000, "원가": 157050}, "4구 선물": {"수량": 10, "매출": 129080, "원가": 51720}, "3구 선물": {"수량": 143, "매출": 1562380, "원가": 598455}}, "대량매출": 1763350, "대량건수": 4, "시즌별": {"상시": {"매출": 1910020, "주문": 9}, "화이트데이": {"매출": 303440, "주문": 15}}, "고객수": 21, "신규고객": 17, "재구매고객": 4, "재구매매출": 315370, "유입": {"네이버 검색": {"주문": 8, "매출": 1265790}, "네이버쇼핑 외": {"주문": 2, "매출": 202190}, "마케팅 링크": {"주문": 7, "매출": 126970}, "네이버페이·홈": {"주문": 5, "매출": 565600}, "장바구니·기타": {"주문": 1, "매출": 52910}}}, {"ym": "202604", "마지막주문일": "2026-04-30", "주문건수": 10, "취소반품건수": 0, "매출": 633910, "원가": 235579, "수수료": 31350, "택배순부담": 3500, "판매이익": 363481, "판매이익률": 0.5734, "객단가": 63391, "고정비": 230000, "관리비": 128600, "마케팅": 0, "일회성": 0, "기타비용": 132200, "영업이익": -127319, "영업이익률": -0.2008, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 51, "세트_4구선물": 0, "세트_개별포장": 4, "낱개추가쿠키": 10, "택배건수": 7, "픽업건수": 3, "정산입금액": 1999812, "단품판매": {}, "상품별": {"3구 선물": {"수량": 51, "매출": 555350, "원가": 213435}, "개별포장": {"수량": 4, "매출": 42560, "원가": 12564}, "낱개 추가": {"수량": 10, "매출": 36000, "원가": 9580}}, "대량매출": 324200, "대량건수": 1, "시즌별": {"상시": {"매출": 633910, "주문": 10}}, "고객수": 7, "신규고객": 6, "재구매고객": 1, "재구매매출": 114500, "유입": {"네이버 검색": {"주문": 6, "매출": 532570}, "네이버쇼핑 외": {"주문": 1, "매출": 54180}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 2, "매출": 36020}, "장바구니·기타": {"주문": 1, "매출": 11140}}}, {"ym": "202605", "마지막주문일": "2026-05-26", "주문건수": 32, "취소반품건수": 0, "매출": 1073430, "원가": 395568, "수수료": 51724, "택배순부담": 7500, "판매이익": 618638, "판매이익률": 0.5763, "객단가": 33545, "고정비": 230000, "관리비": 117600, "마케팅": 28400, "일회성": 0, "기타비용": 0, "영업이익": 242638, "영업이익률": 0.226, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 71, "세트_4구선물": 12, "세트_개별포장": 11, "낱개추가쿠키": 2, "택배건수": 13, "픽업건수": 19, "정산입금액": 1213523, "단품판매": {}, "상품별": {"3구 선물": {"수량": 71, "매출": 777520, "원가": 297135}, "4구 선물": {"수량": 12, "매출": 173810, "원가": 62064}, "개별포장": {"수량": 11, "매출": 114900, "원가": 34551}, "낱개 추가": {"수량": 2, "매출": 7200, "원가": 1818}}, "대량매출": 294860, "대량건수": 2, "시즌별": {"감사의달(스승의날)": {"매출": 825870, "주문": 24}, "상시": {"매출": 247560, "주문": 10}}, "고객수": 26, "신규고객": 25, "재구매고객": 1, "재구매매출": 79870, "유입": {"네이버 검색": {"주문": 9, "매출": 340780}, "네이버쇼핑 외": {"주문": 11, "매출": 280240}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 5, "매출": 262220}, "장바구니·기타": {"주문": 7, "매출": 190190}}}, {"ym": "202606", "마지막주문일": "2026-06-30", "주문건수": 8, "취소반품건수": 1, "매출": 243470, "원가": 81021, "수수료": 11031, "택배순부담": 1500, "판매이익": 149918, "판매이익률": 0.6158, "객단가": 30434, "고정비": 230000, "관리비": 130300, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -210382, "영업이익률": -0.8641, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 8, "세트_4구선물": 1, "세트_개별포장": 10, "낱개추가쿠키": 11, "택배건수": 4, "픽업건수": 4, "정산입금액": 82712, "단품판매": {}, "상품별": {"개별포장": {"수량": 10, "매출": 106400, "원가": 31410}, "3구 선물": {"수량": 8, "매출": 86330, "원가": 33480}, "낱개 추가": {"수량": 11, "매출": 39600, "원가": 10959}, "4구 선물": {"수량": 1, "매출": 11140, "원가": 5172}}, "대량매출": 0, "대량건수": 0, "시즌별": {"상시": {"매출": 243470, "주문": 8}}, "고객수": 7, "신규고객": 4, "재구매고객": 3, "재구매매출": 97760, "유입": {"네이버 검색": {"주문": 3, "매출": 63840}, "네이버쇼핑 외": {"주문": 1, "매출": 52910}, "마케팅 링크": {"주문": 1, "매출": 50240}, "네이버페이·홈": {"주문": 2, "매출": 22280}, "장바구니·기타": {"주문": 1, "매출": 54200}}}, {"ym": "202607", "마지막주문일": "2026-07-31", "주문건수": 8, "취소반품건수": 2, "매출": 470290, "원가": 166383, "수수료": 23256, "택배순부담": 14000, "판매이익": 266651, "판매이익률": 0.567, "객단가": 58786, "고정비": 230000, "관리비": 135552, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -98901, "영업이익률": -0.2103, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 30, "세트_4구선물": 0, "세트_개별포장": 13, "낱개추가쿠키": 0, "택배건수": 7, "픽업건수": 1, "정산입금액": 547699, "단품판매": {}, "상품별": {"개별포장": {"수량": 13, "매출": 138320, "원가": 40833}, "3구 선물": {"수량": 30, "매출": 331970, "원가": 125550}}, "대량매출": 222800, "대량건수": 1, "시즌별": {"상시": {"매출": 470290, "주문": 8}}, "고객수": 7, "신규고객": 5, "재구매고객": 2, "재구매매출": 98260, "유입": {"네이버 검색": {"주문": 3, "매출": 309690}, "네이버쇼핑 외": {"주문": 0, "매출": 0}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 2, "매출": 22280}, "장바구니·기타": {"주문": 3, "매출": 138320}}}, {"ym": "202608", "마지막주문일": "2026-08-29", "주문건수": 9, "취소반품건수": 0, "매출": 402480, "원가": 131787, "수수료": 19900, "택배순부담": 9500, "판매이익": 241293, "판매이익률": 0.5995, "객단가": 44720, "고정비": 230000, "관리비": 135000, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -123707, "영업이익률": -0.3074, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 4, "세트_4구선물": 12, "세트_개별포장": 16, "낱개추가쿠키": 3, "택배건수": 9, "픽업건수": 0, "정산입금액": 440196, "단품판매": {}, "상품별": {"개별포장": {"수량": 16, "매출": 170240, "원가": 50256}, "4구 선물": {"수량": 12, "매출": 176880, "원가": 62064}, "낱개 추가": {"수량": 3, "매출": 10800, "원가": 2727}, "3구 선물": {"수량": 4, "매출": 44560, "원가": 16740}}, "대량매출": 110380, "대량건수": 1, "시즌별": {"상시": {"매출": 402480, "주문": 9}}, "고객수": 6, "신규고객": 4, "재구매고객": 2, "재구매매출": 180440, "유입": {"네이버 검색": {"주문": 2, "매출": 139860}, "네이버쇼핑 외": {"주문": 1, "매출": 14240}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 5, "매출": 165700}, "장바구니·기타": {"주문": 1, "매출": 82680}}}, {"ym": "202609", "마지막주문일": "2026-09-25", "주문건수": 11, "취소반품건수": 1, "매출": 968020, "원가": 336642, "수수료": 37374, "택배순부담": 7000, "판매이익": 587004, "판매이익률": 0.6064, "객단가": 88002, "고정비": 230000, "관리비": 146100, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": 210904, "영업이익률": 0.2179, "비용입력": 1, "관리비추정": 0, "세트_3구선물": 19, "세트_4구선물": 8, "세트_개별포장": 11, "낱개추가쿠키": 0, "택배건수": 7, "픽업건수": 4, "정산입금액": 901066, "단품판매": {"답례 단품": 150}, "상품별": {"개별포장": {"수량": 11, "매출": 117040, "원가": 34551}, "4구 선물": {"수량": 8, "매출": 114320, "원가": 41376}, "3구 선물": {"수량": 19, "매출": 211660, "원가": 79515}, "답례 단품": {"수량": 150, "매출": 525000, "원가": 181200}}, "대량매출": 625260, "대량건수": 2, "시즌별": {"상시": {"매출": 968020, "주문": 11}}, "고객수": 11, "신규고객": 8, "재구매고객": 3, "재구매매출": 175400, "유입": {"네이버 검색": {"주문": 4, "매출": 224560}, "네이버쇼핑 외": {"주문": 3, "매출": 99260}, "마케팅 링크": {"주문": 1, "매출": 525000}, "네이버페이·홈": {"주문": 1, "매출": 10640}, "장바구니·기타": {"주문": 2, "매출": 108560}}}, {"ym": "202610", "마지막주문일": "2026-10-07", "주문건수": 1, "취소반품건수": 0, "매출": 53200, "원가": 15705, "수수료": 2631, "택배순부담": 3000, "판매이익": 31864, "판매이익률": 0.5989, "객단가": 53200, "고정비": 51935, "관리비": 31361, "마케팅": 0, "일회성": 0, "기타비용": 0, "영업이익": -51432, "영업이익률": -0.9668, "비용입력": 0, "관리비추정": 1, "세트_3구선물": 0, "세트_4구선물": 0, "세트_개별포장": 5, "낱개추가쿠키": 0, "택배건수": 1, "픽업건수": 0, "정산입금액": 93878, "단품판매": {}, "상품별": {"개별포장": {"수량": 5, "매출": 53200, "원가": 15705}}, "대량매출": 0, "대량건수": 0, "시즌별": {"상시": {"매출": 53200, "주문": 1}}, "고객수": 1, "신규고객": 1, "재구매고객": 0, "재구매매출": 0, "유입": {"네이버 검색": {"주문": 1, "매출": 53200}, "네이버쇼핑 외": {"주문": 0, "매출": 0}, "마케팅 링크": {"주문": 0, "매출": 0}, "네이버페이·홈": {"주문": 0, "매출": 0}, "장바구니·기타": {"주문": 0, "매출": 0}}}];
+const ALERTS = [];
+const META = {"BEP": 718946, "운영비": 417652, "판매이익률": 0.5809, "개월": 12, "대량기준": 100000};
+const NOW_DAY = 7;
+const $ = s => document.querySelector(s);
+const won = v => Math.round(v).toLocaleString('ko-KR');
+const man = v => (v/10000).toLocaleString('ko-KR',{maximumFractionDigits:1});
+const lab = ym => ym.slice(2,4)+'.'+ym.slice(4);
+const labLong = ym => ym.slice(0,4)+'년 '+(+ym.slice(4))+'월';
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let range = 12, charts = [];
+
+function lastDayOf(ym){const y=+ym.slice(0,4),m=+ym.slice(4);return new Date(y,m,0).getDate();}
+const NOW_YM = '202610';
+// 진행 중인 달 = 오늘 기준 이번 달만 (지난달은 주문이 말일 전에 끝났어도 마감 월)
+function isPartial(d){ return d.ym===NOW_YM; }
+const partialTag = d => isPartial(d) ? `<span class="tag">진행 중 · ${+NOW_YM.slice(4)}/${NOW_DAY}</span>` : '';
+
+function renderMetaLabels(){
+  $('#bigTh').textContent=`주문 1건 ${man(META.대량기준)}만 이상`; $('#bigTh2').textContent=`${man(META.대량기준)}만 원`;
+  const t=`${man(META.BEP)}만 (최근 ${META.개월}개월 평균 운영비 ${man(META.운영비)}만 ÷ 판매이익률 ${(META.판매이익률*100).toFixed(1)}%)`;
+  $('#bepLbl').textContent=man(META.BEP)+'만'; $('#bepLbl2').textContent=t;
+}
+function renderMeta(){
+  const f=DATA[0].ym,l=DATA[DATA.length-1];
+  const lo=DATA.map(r=>r.마지막주문일).filter(Boolean).sort().pop()||'-';
+  $('#meta').innerHTML = `데이터 ${labLong(f)} ~ ${labLong(l.ym)} (마지막 주문 ${lo}) · 업데이트 2026-10-07 15:54`;
+}
+
+function delta(cur,prev,isRate){
+  if(prev===undefined||prev===null) return '<span class="delta flat">전월 데이터 없음</span>';
+  const d = isRate ? (cur-prev)*100 : (prev? (cur-prev)/Math.abs(prev)*100 : 0);
+  const cls = d>0.05?'up':d<-0.05?'down':'flat', arrow = d>0.05?'▲':d<-0.05?'▼':'–';
+  const txt = isRate ? `${Math.abs(d).toFixed(1)}%p` : `${Math.abs(d).toFixed(0)}%`;
+  return `<span class="delta ${cls}">${arrow} ${txt} 전월 대비</span>`;
+}
+
+const BY_YM = Object.fromEntries(DATA.map(r=>[r.ym,r]));
+function lastYear(ym){ return BY_YM[(+ym.slice(0,4)-1)+ym.slice(4)]; }
+function yoy(cur,prev,isRate){
+  const d = isRate ? (cur-prev)*100 : (prev? (cur-prev)/Math.abs(prev)*100 : 0);
+  const cls = d>0.05?'up':d<-0.05?'down':'flat', arrow = d>0.05?'▲':d<-0.05?'▼':'–';
+  return `<span class="delta ${cls}">${arrow} ${Math.abs(d).toFixed(isRate?1:0)}${isRate?'%p':'%'} 전년 동월 대비</span>`;
+}
+function baseMonth(rows){
+  const last=rows[rows.length-1];
+  return (isPartial(last) && rows.length>1) ? rows[rows.length-2] : last;
+}
+function renderKpis(rows){
+  const c=baseMonth(rows), p=DATA[DATA.indexOf(c)-1], last=rows[rows.length-1];
+  const sum=k=>rows.reduce((a,r)=>a+r[k],0);
+  const tS=sum('매출'), tP=sum('판매이익'), tO=sum('주문건수'), tOp=sum('영업이익');
+  const noExp = c.비용입력 ? '' : '<span class="tag warn">비용 미입력</span>';
+
+  const y=lastYear(c.ym);
+  const yy=(k,isRate)=>y?yoy(c[k],y[k],isRate):'<span class="delta flat">전년 동월 데이터 없음</span>';
+  const cards=[
+    ['매출', man(c.매출), '만원', delta(c.매출,p&&p.매출)+'<br>'+yy('매출'), `기간 합계 ${man(tS)}만원`],
+    ['판매이익', man(c.판매이익), '만원', delta(c.판매이익,p&&p.판매이익)+'<br>'+yy('판매이익'), `기간 합계 ${man(tP)}만원`],
+    ['영업이익'+noExp, man(c.영업이익), '만원', delta(c.영업이익,p&&p.영업이익)+'<br>'+yy('영업이익'), `기간 합계 ${man(tOp)}만원`],
+    ['영업이익률', (c.영업이익률*100).toFixed(1), '%', delta(c.영업이익률,p&&p.영업이익률,true)+'<br>'+yy('영업이익률',true), `기간 평균 ${(tS?tOp/tS*100:0).toFixed(1)}% · 판매이익률 ${(c.판매이익률*100).toFixed(1)}%`],
+    ['주문건수', c.주문건수, '건', delta(c.주문건수,p&&p.주문건수)+'<br>'+yy('주문건수'), `객단가 ${man(c.객단가)}만원 · 기간 ${tO}건`],
+  ];
+  $('#kpis').innerHTML = cards.map((k,i)=>`<div class="card kpi">
+    <div class="label">${labLong(c.ym)} ${k[0]}</div>
+    <div class="value${String(k[1]).startsWith('-')?' neg':''}">${k[1]}<small>${k[2]}</small></div>${k[3]}<div class="sub">${k[4]}</div></div>`).join('');
+  renderLive(last, c);
+}
+
+// ── 이번 달 진행 현황 (예상 매출 vs BEP) ─────────────────
+function renderLive(last, base){
+  if(last===base || !isPartial(last)){ $('#live').style.display='none'; return; }
+  const days=lastDayOf(last.ym);
+  const el = NOW_DAY;
+  const normal=last.매출-last.대량매출;
+  const proj=Math.round(last.대량매출 + normal/el*days);     // 대량 주문은 1회성으로 보고 일반 주문만 일수 비례
+  const pct=META.BEP? proj/META.BEP : 0, ok=pct>=1;
+  $('#live').style.display='block';
+  $('#live').innerHTML=`<div class="lv-head"><b>이번 달 진행 현황</b> <span class="lv-sub">${labLong(last.ym)} · ${el}일 경과 / ${days}일</span>
+      <span class="lv-note">아래 카드는 ${labLong(base.ym)}(마감 월) 기준</span></div>
+    <div class="lv-grid">
+      <div><span class="lb">현재 매출</span><b>${man(last.매출)}만</b><small>판매이익 ${man(last.판매이익)}만 · 주문 ${last.주문건수}건</small></div>
+      <div><span class="lb">예상 매출</span><b>${man(proj)}만</b><small>일반 주문 ${man(normal)}만을 일수 비례 + 대량 ${man(last.대량매출)}만(${last.대량건수}건)</small></div>
+      <div class="lv-bar"><span class="lb">BEP ${man(META.BEP)}만 대비 <b class="${ok?'ok':'ng'}">${(pct*100).toFixed(0)}%</b></span>
+        <div class="bar"><i class="${ok?'ok':'ng'}" style="width:${Math.min(pct,1.5)/1.5*100}%"></i><em style="left:${1/1.5*100}%"></em></div>
+        <small class="${ok?'ok':'ng'}">${ok?'✔ 이 속도면 BEP 달성 예상':'✖ 이 속도면 BEP 미달 예상 · '+man(META.BEP-proj)+'만 부족'}</small></div>
+    </div>`;
+}
+
+function renderBreakdown(rows){
+  const c=baseMonth(rows), s=c.매출||1;
+  const costs=[['원가',c.원가,'--cogs'],['수수료·택배',c.수수료+c.택배순부담,'--fee'],['고정비',c.고정비,'--fix'],
+               ['관리비',c.관리비,'--mgmt'],['마케팅·일회성',c.마케팅+c.일회성+c.기타비용,'--mkt']];
+  const op=c.영업이익, total=costs.reduce((a,p)=>a+p[1],0), base=Math.max(s,total);
+  const barParts = op>0 ? costs.concat([['영업이익',op,'--op']]) : costs;
+  $('#bdTitle').textContent = `${labLong(c.ym)} 매출은 어디로 갔나`;
+  $('#bdBar').innerHTML = barParts.filter(p=>p[1]>0).map(p=>`<div title="${p[0]} ${won(p[1])}원" style="width:${p[1]/base*100}%;background:var(${p[2]})"></div>`).join('');
+  $('#bdTable').innerHTML = costs.map(p=>`<tr><td><span class="legend" style="margin:0;display:inline"><i style="background:var(${p[2]})"></i></span>${p[0]}</td><td>${won(p[1])}원</td><td>${(p[1]/s*100).toFixed(1)}%</td></tr>`).join('')
+    + `<tr><td><span class="legend" style="margin:0;display:inline"><i style="background:var(--op)"></i></span><b>영업이익</b></td><td class="${op<0?'neg':''}"><b>${won(op)}원</b></td><td>${(op/s*100).toFixed(1)}%</td></tr>`
+    + `<tr class="total"><td>매출</td><td>${won(c.매출)}원</td><td>100%</td></tr>`;
+  const notes=[];
+  if(op<0) notes.push(`비용이 매출보다 ${won(-op)}원 많아 적자입니다 (막대 전체 = 비용 합계).`);
+  if(!c.비용입력) notes.push('이 달은 수동입력.xlsx에 관리비가 없습니다 — 영업이익이 실제보다 높게 보일 수 있습니다.');
+  notes.push(`정산입금액 ${won(c.정산입금액)}원 (입금일 기준이라 주문 월과 다를 수 있음)`);
+  $('#bdNote').innerHTML = notes.join('<br>');
+}
+
+function renderTable(rows){
+  const cols=[['월',r=>labLong(r.ym)+partialTag(r)],
+    ['주문',r=>r.주문건수],['매출',r=>won(r.매출)],
+    ['전년 동월',r=>{const y=lastYear(r.ym); if(!y) return '<span style="color:var(--text-3)">–</span>';
+      const d=y.매출?(r.매출-y.매출)/y.매출*100:0; return `${won(y.매출)} <small class="${d>=0?'up-c2':'down-c2'}">${d>=0?'+':''}${d.toFixed(0)}%</small>`;}],['원가',r=>won(r.원가)],['수수료',r=>won(r.수수료)],
+    ['택배순부담',r=>won(r.택배순부담)],['판매이익',r=>won(r.판매이익)],['고정비',r=>won(r.고정비)],
+    ['변동비',r=>won(r.관리비+r.마케팅+r.일회성+r.기타비용)+(r.관리비추정?'<span class="tag" title="관리비 청구 전 · 최근 3개월 평균으로 추정">관리비 추정</span>':(r.비용입력?'':'<span class="tag warn">미입력</span>'))],
+    ['영업이익',r=>won(r.영업이익)],['영업이익률',r=>(r.영업이익률*100).toFixed(1)+'%'],
+    ['객단가',r=>won(r.객단가)],['3구',r=>r.세트_3구선물],['4구',r=>r.세트_4구선물],['개별',r=>r.세트_개별포장],
+    ['단품',r=>{const u=r.단품판매||{};const t=Object.values(u).reduce((a,b)=>a+b,0);return t?`<span title="${Object.entries(u).map(([k,v])=>k+' '+v+'개').join(', ')}">${t}</span>`:0;}],
+    ['택배/픽업',r=>r.택배건수+' / '+r.픽업건수]];
+  $('#detail').innerHTML = '<thead><tr>'+cols.map(c=>`<th>${c[0]}</th>`).join('')+'</tr></thead><tbody>'
+    + rows.slice().reverse().map(r=>'<tr>'+cols.map(c=>`<td class="${(c[0]==='영업이익'&&r.영업이익<0)||(c[0]==='영업이익률'&&r.영업이익률<0)?'neg':''}">${c[1](r)}</td>`).join('')+'</tr>').join('')+'</tbody>';
+}
+
+function baseOpts(yFmt){
+  const grid=css('--grid'), t2=css('--text-2');
+  return {responsive:true,maintainAspectRatio:false,animation:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:css('--text-1'),titleColor:css('--surface'),bodyColor:css('--surface'),
+      padding:10,boxPadding:4,usePointStyle:true,
+      callbacks:{title:it=>labLong(it[0].label.replace('.','').replace(/^/,'20')),
+        label:c=>` ${c.dataset.label}  ${yFmt(c.parsed.y,true)}`}}},
+    scales:{x:{grid:{display:false},ticks:{color:t2,maxRotation:0,autoSkipPadding:6},border:{color:grid}},
+      y:{grid:{color:grid},border:{display:false},ticks:{color:t2,callback:v=>yFmt(v)}}}};
+}
+const fmtMan=(v,full)=>full?won(v)+'원':man(v)+'만';
+const fmtCnt=(v,full)=>v+(full?'개':'');
+const UNIT_NAMES=[...new Set(DATA.flatMap(r=>Object.keys(r.단품판매||{})))];
+const UNIT_COLORS=['--c4','--c5'];
+const fmtPct=(v,full)=>(v*100).toFixed(full?1:0)+'%';
+
+function bar(label,data,color,stack){return {type:'bar',label,data,backgroundColor:color,borderColor:css('--surface'),borderWidth:{top:0,left:1,right:1,bottom:0},borderRadius:{topLeft:4,topRight:4},borderSkipped:'bottom',maxBarThickness:36,stack};}
+
+function renderCharts(rows){
+  charts.forEach(c=>c.destroy()); charts=[];
+  const L=rows.map(r=>lab(r.ym)), g=k=>rows.map(r=>r[k]);
+  const surf=css('--surface');
+  const mainOpts=baseOpts(fmtMan);
+  mainOpts.scales.y.grid.color=c=>c.tick.value===0?css('--text-3'):css('--grid');
+  mainOpts.scales.x.stacked=true; mainOpts.scales.y.stacked=true;
+  mainOpts.layout={padding:{top:18}};
+  // 툴팁: 제목 아래 총 매출 → 일반/대량 → 이익 → BEP 순
+  const ORDER={'일반 주문':1,'대량 주문':2,'판매이익':3,'영업이익':4,'BEP':5};
+  mainOpts.plugins.tooltip.itemSort=(a,b)=>(ORDER[a.dataset.label]||9)-(ORDER[b.dataset.label]||9);
+  mainOpts.plugins.tooltip.callbacks.title=it=>[labLong(rows[it[0].dataIndex].ym),'총 매출  '+won(rows[it[0].dataIndex].매출)+'원'];
+  mainOpts.plugins.tooltip.callbacks.label=c=>(c.dataset.label.includes('주문')?'   └ ':' ')+`${c.dataset.label}  ${won(c.parsed.y)}원`;
+  charts.push(new Chart($('#cMain'),{data:{labels:L,datasets:[
+    {type:'line',label:'판매이익',data:g('판매이익'),borderColor:css('--profit'),backgroundColor:css('--profit'),borderWidth:2.5,pointRadius:4,pointHoverRadius:6,pointBorderColor:surf,pointBorderWidth:2,tension:.25,order:0,stack:'l1'},
+    {type:'line',label:'영업이익',data:g('영업이익'),borderColor:css('--op'),backgroundColor:css('--op'),borderWidth:2,pointRadius:3.5,pointHoverRadius:6,pointBorderColor:surf,pointBorderWidth:2,tension:.25,order:0,stack:'l2'},
+    {type:'line',label:'BEP',data:L.map(()=>META.BEP),borderColor:css('--text-2'),borderDash:[6,5],borderWidth:1.5,pointRadius:0,pointHoverRadius:0,order:0,stack:'bep'},
+    {...bar('일반 주문',rows.map(r=>r.매출-r.대량매출),css('--sales'),'m'),order:1},
+    {...bar('대량 주문',g('대량매출'),css('--salesL'),'m'),order:1}]},options:mainOpts,
+    plugins:[{id:'totalLabels',afterDatasetsDraw(ch){          // 막대 위 총 매출
+      const meta=ch.getDatasetMeta(ch.data.datasets.length-1), cx=ch.ctx;
+      cx.save(); cx.font='600 11px "Noto Sans KR",system-ui,sans-serif'; cx.fillStyle=css('--text-2'); cx.textAlign='center'; cx.textBaseline='bottom';
+      meta.data.forEach((el,i)=>{ const v=rows[i].매출; if(v>0) cx.fillText(man(v)+'만', el.x, el.y-4); });
+      cx.restore();}}]}));
+
+  const costOpts=baseOpts(fmtMan); costOpts.scales.x.stacked=true; costOpts.scales.y.stacked=true;
+  charts.push(new Chart($('#cCost'),{type:'bar',data:{labels:L,datasets:[
+    bar('원가',g('원가'),css('--cogs'),'c'),
+    bar('수수료·택배',rows.map(r=>r.수수료+r.택배순부담),css('--fee'),'c'),
+    bar('고정비',g('고정비'),css('--fix'),'c'),
+    bar('관리비',g('관리비'),css('--mgmt'),'c'),
+    bar('마케팅·일회성',rows.map(r=>r.마케팅+r.일회성+r.기타비용),css('--mkt'),'c'),
+    {type:'line',label:'매출',data:g('매출'),borderColor:css('--sales'),backgroundColor:css('--sales'),borderWidth:2,borderDash:[6,4],pointRadius:3,pointHoverRadius:5,tension:0,stack:'m',order:-1}]},options:costOpts}));
+
+  const setOpts=baseOpts(fmtCnt); setOpts.scales.x.stacked=true; setOpts.scales.y.stacked=true;
+  charts.push(new Chart($('#cSet'),{type:'bar',data:{labels:L,datasets:[
+    bar('3구 선물',g('세트_3구선물'),css('--c1'),'s'),bar('4구 선물',g('세트_4구선물'),css('--c2'),'s'),bar('개별포장',g('세트_개별포장'),css('--c3'),'s'),
+    ...UNIT_NAMES.map((n,i)=>bar(n,rows.map(r=>(r.단품판매||{})[n]||0),css(UNIT_COLORS[i%UNIT_COLORS.length]),'s'))]},options:setOpts}));
+  $('#setLegend').innerHTML=[['3구 선물','--c1'],['4구 선물','--c2'],['개별포장','--c3'],...UNIT_NAMES.map((n,i)=>[n,UNIT_COLORS[i%UNIT_COLORS.length]])]
+    .map(([n,c])=>`<span><i style="background:var(${c})"></i>${n}</span>`).join('');
+
+}
+
+// ── 원가표 ─────────────────────────────────────────
+const COST = {"기준": 0.4, "상품": [{"상품": "3구 세트", "유형": "세트", "이력": [{"적용시작월": "2025-01", "항목": [{"이름": "3구 선물", "원가": 4185, "구성": "쿠키 3개 2,962 + 선물포장 1,222"}, {"이름": "4구 선물", "원가": 5172, "구성": "쿠키 4개 3,949 (추가 1개 맛 평균 987) + 선물포장 1,222"}, {"이름": "개별포장", "원가": 3141, "구성": "쿠키 3개 2,962 + 개별포장 179"}, {"이름": "낱개 추가 · 월넛", "원가": 909, "구성": "쿠키 1개 재료비"}, {"이름": "낱개 추가 · 더블초코", "원가": 1059, "구성": "쿠키 1개 재료비"}, {"이름": "낱개 추가 · 말차", "원가": 994, "구성": "쿠키 1개 재료비"}]}]}, {"상품": "답례 단품", "유형": "단품", "이력": [{"적용시작월": "2026-09", "항목": [{"이름": "답례 단품", "원가": 1208, "구성": "월넛 1개 167 + 피칸 1개 206 + 버터쿠키 3개 200 + 유산지 2장 30 + 방습제 40 + 패키지 225 + 리본 270 + 스티커 70"}]}]}]};
+const TH = COST.기준;
+const PROD_ORDER = ['3구 선물','4구 선물','개별포장',...UNIT_NAMES,'낱개 추가'];
+const PROD_COLOR = n => ({'3구 선물':'--c1','4구 선물':'--c2','개별포장':'--c3','낱개 추가':'--c5'})[n] || UNIT_COLORS[0];
+let view='dash';
+
+function renderCostNow(){
+  let h='<thead><tr><th>상품</th><th>항목</th><th>개당 원가</th><th>구성</th><th>적용 시작</th></tr></thead><tbody>';
+  COST.상품.forEach(p=>{
+    const cur=p.이력[p.이력.length-1];
+    cur.항목.forEach((it,i)=>{
+      h+=`<tr><td class="grp">${i===0?p.상품:''}</td><td class="name">${it.이름}</td>
+        <td>${it.원가==null?'<span class="tag warn">미등록</span>':won(it.원가)+'원'}</td>
+        <td style="text-align:left">${it.구성||''}</td><td>${cur.적용시작월}</td></tr>`;
+    });
+  });
+  $('#costNow').innerHTML=h+'</tbody>';
+}
+
+function aggProducts(rows){
+  const agg={};
+  rows.forEach(r=>Object.entries(r.상품별||{}).forEach(([n,d])=>{
+    const a=agg[n]||(agg[n]={수량:0,매출:0,원가:0}); a.수량+=d.수량; a.매출+=d.매출; a.원가+=d.원가;}));
+  return agg;
+}
+
+function renderCostRate(rows){
+  const agg=aggProducts(rows), names=PROD_ORDER.filter(n=>agg[n]&&agg[n].수량);
+  $('#rateRange').textContent=`(${labLong(rows[0].ym)} ~ ${labLong(rows[rows.length-1].ym)})`;
+  $('#thLabel').textContent=(TH*100).toFixed(0)+'%';
+  let tS=0,tC=0;
+  let h='<thead><tr><th>상품</th><th>판매 수량</th><th>매출</th><th>원가</th><th>평균 판매가</th><th>개당 원가</th><th>원가율</th><th style="text-align:left">원가율 ('+(TH*100).toFixed(0)+'% 기준선)</th></tr></thead><tbody>';
+  names.forEach(n=>{
+    const a=agg[n], rate=a.매출?a.원가/a.매출:0, over=rate>TH; tS+=a.매출; tC+=a.원가;
+    h+=`<tr><td class="name">${n}</td><td>${won(a.수량)}</td><td>${won(a.매출)}</td><td>${won(a.원가)}</td>
+      <td>${won(a.매출/a.수량)}</td><td>${won(a.원가/a.수량)}</td>
+      <td class="${over?'over':''}">${(rate*100).toFixed(1)}%${over?' ▲':''}</td>
+      <td style="text-align:left"><div class="ratebar"><i class="${over?'over':''}" style="width:${Math.min(rate,1)*100}%"></i><b style="left:${TH*100}%"></b></div></td></tr>`;
+  });
+  const tr=tS?tC/tS:0;
+  h+=`<tr><td class="name"><b>전체</b></td><td></td><td><b>${won(tS)}</b></td><td><b>${won(tC)}</b></td><td></td><td></td>
+      <td class="${tr>TH?'over':''}"><b>${(tr*100).toFixed(1)}%</b></td><td></td></tr>`;
+  $('#costRate').innerHTML=h+'</tbody><caption style="caption-side:bottom;text-align:left;padding-top:8px;color:var(--text-3);font-size:12px">4구 선물 매출에는 추가 1구 금액 포함 · 낱개 추가 = 개별포장 주문의 추가 쿠키</caption>';
+}
+
+function renderCostMonthly(rows){
+  const names=PROD_ORDER.filter(n=>rows.some(r=>(r.상품별||{})[n]));
+  let h='<thead><tr><th>월</th>'+names.map(n=>`<th>${n}</th>`).join('')+'<th>원가 합계</th><th>매출</th><th>원가율</th></tr></thead><tbody>';
+  rows.slice().reverse().forEach(r=>{
+    const sp=r.상품별||{}, rate=r.매출?r.원가/r.매출:0;
+    h+=`<tr><td>${labLong(r.ym)}${partialTag(r)}</td>`+names.map(n=>{const d=sp[n]; return d&&d.수량?`<td>${won(d.원가)}<small>${d.수량}×${won(d.원가/d.수량)}</small></td>`:'<td style="color:var(--text-3)">–</td>';}).join('')
+      +`<td><b>${won(r.원가)}</b></td><td>${won(r.매출)}</td><td class="${rate>TH?'over':''}">${(rate*100).toFixed(1)}%</td></tr>`;
+  });
+  $('#costMonthly').innerHTML=h+'</tbody>';
+  const L=rows.map(r=>lab(r.ym));
+  $('#costLegend').innerHTML=names.map(n=>`<span><i style="background:var(${PROD_COLOR(n)})"></i>${n}</span>`).join('');
+  const o=baseOpts(fmtMan); o.scales.x.stacked=true; o.scales.y.stacked=true;
+  charts.push(new Chart($('#cCostProd'),{type:'bar',data:{labels:L,datasets:
+    names.map(n=>bar(n,rows.map(r=>((r.상품별||{})[n]||{}).원가||0),css(PROD_COLOR(n)),'p'))},options:o}));
+}
+
+function renderCostHist(){
+  const ev=[];
+  COST.상품.forEach(p=>p.이력.forEach((b,i)=>{
+    if(i===0){ ev.push({when:b.적용시작월,prod:p.상품,lines:['최초 등록: '+b.항목.map(it=>it.이름+' '+(it.원가==null?'미등록':won(it.원가)+'원')).join(', ')]}); return; }
+    const prev={}; p.이력[i-1].항목.forEach(it=>prev[it.이름]=it.원가);
+    const lines=b.항목.filter(it=>prev[it.이름]!==it.원가).map(it=>{
+      const a=prev[it.이름], d=(it.원가!=null&&a!=null)?it.원가-a:null;
+      return `${it.이름}: ${a==null?'미등록':won(a)+'원'} → ${it.원가==null?'미등록':won(it.원가)+'원'}`+(d==null?'':` <span class="${d>0?'up-c':'down-c'}">(${d>0?'+':''}${won(d)})</span>`);});
+    ev.push({when:b.적용시작월,prod:p.상품,lines:lines.length?lines:['변경 없음']});
+  }));
+  ev.sort((a,b)=>b.when.localeCompare(a.when));
+  $('#costHist').innerHTML=ev.map(e=>`<div class="hist-item"><span class="when">${e.when}</span><span class="prod">${e.prod}</span><ul>${e.lines.map(l=>`<li>${l}</li>`).join('')}</ul></div>`).join('');
+}
+
+// ── 가게 누적 실적 (기간 버튼과 무관하게 전체 기간) ───────────
+function renderCum(){
+  const sum=k=>DATA.reduce((a,r)=>a+r[k],0);
+  const S=sum('매출'), P=sum('판매이익'), O=sum('영업이익');
+  const noExp=DATA.filter(r=>!r.비용입력 && !isPartial(r)).length;
+  const cell=(lb,v,rt,extra='')=>`<div><div class="lb">${lb}</div><div class="vl${v<0?' neg':''}">${man(v)}<small>만원</small></div><div class="rt">${rt}${extra}</div></div>`;
+  $('#cum').innerHTML=`<div class="ttl">가게 누적 실적<small>${labLong(DATA[0].ym)} ~ 현재 · ${DATA.length}개월</small></div>`
+    + cell('총 매출',S,`주문 ${sum('주문건수').toLocaleString('ko-KR')}건`)
+    + cell('총 판매이익',P,`판매이익률 ${(S?P/S*100:0).toFixed(1)}%`)
+    + cell('총 영업이익',O,`영업이익률 ${(S?O/S*100:0).toFixed(1)}%`,
+        noExp?`<br><span class="tag warn" style="margin-left:0">비용 미입력 ${noExp}개월 포함 → 실제보다 높을 수 있음</span>`:'');
+}
+
+function renderCumChart(){
+  let acc=0; const cum=DATA.map(r=>(acc+=r.영업이익));
+  const L=DATA.map(r=>lab(r.ym));
+  let turn=null;
+  for(let i=1;i<cum.length;i++) if(cum[i-1]<0 && cum[i]>=0) turn=DATA[i].ym;
+  const now=cum[cum.length-1], minV=Math.min(...cum), minAt=DATA[cum.indexOf(minV)].ym;
+  $('#cumDesc').innerHTML = `매달 영업이익을 더한 값 · 전체 기간 (기간 버튼과 무관) · 현재 누적 <b>${won(now)}원</b>`
+    + (minV<0?` · 최대 누적 적자 ${won(minV)}원 (${labLong(minAt)})`:'')
+    + (turn?` · <b>누적 흑자 전환: ${labLong(turn)}</b>`:(now<0?' · 아직 누적 적자':''));
+  const o=baseOpts(fmtMan);
+  o.scales.y.grid.color=c=>c.tick.value===0?css('--text-3'):css('--grid');
+  const op=css('--op'), dn=css('--down');
+  charts.push(new Chart($('#cCum'),{data:{labels:L,datasets:[
+    {type:'line',label:'누적 영업이익',data:cum,borderWidth:2.5,tension:.2,order:0,
+     segment:{borderColor:c=>c.p1.parsed.y<0?dn:op},
+     pointBackgroundColor:cum.map(v=>v<0?dn:op),pointBorderColor:css('--surface'),pointBorderWidth:2,pointRadius:4,pointHoverRadius:6},
+    {...bar('월 영업이익',g2(DATA,'영업이익'),css('--grid')),order:1,borderRadius:3}]},options:o}));
+}
+const g2=(rows,k)=>rows.map(r=>r[k]);
+
+// ── 시즌별 매출 ──────────────────────────────────────
+function renderSeason(rows){
+  const rng=`(${labLong(rows[0].ym)} ~ ${labLong(rows[rows.length-1].ym)})`;
+  $('#seasonRange').textContent=rng;
+  const agg={}, total=rows.reduce((a,r)=>a+r.매출,0);
+  rows.forEach(r=>Object.entries(r.시즌별||{}).forEach(([k,d])=>{
+    const a=agg[k]||(agg[k]={매출:0,주문:0,months:new Set(),years:{}});
+    a.매출+=d.매출; a.주문+=d.주문; a.months.add(r.ym);
+    const y=r.ym.slice(0,4), ya=a.years[y]||(a.years[y]={매출:0,주문:0}); ya.매출+=d.매출; ya.주문+=d.주문;}));
+  const seas=Object.entries(agg).filter(([k])=>k!=='상시').sort((a,b)=>b[1].매출-a[1].매출);
+  const sTotal=seas.reduce((a,[,d])=>a+d.매출,0), max=Math.max(1,...seas.map(([,d])=>d.매출));   // 막대 길이는 시즌끼리 비교
+  $('#seasonDesc').innerHTML=`옵션명의 포장 이름으로 자동 분류 · 시즌 매출 <b>${man(sTotal)}만</b> = 전체의 <b>${(total?sTotal/total*100:0).toFixed(1)}%</b> · 추가 쿠키는 같은 주문의 시즌에 포함`;
+  const mlab=ms=>[...ms].sort().map(m=>`${+m.slice(4)}월`).join('·');
+  let h='';
+  seas.forEach(([k,d])=>{
+    h+=`<div class="srow"><div class="nm">${k}<small>${[...new Set([...d.months].map(m=>m.slice(0,4)))].join('·')}년 ${mlab(d.months)}</small></div>
+      <div class="bar"><i style="width:${d.매출/max*100}%"></i></div><div class="vl">${man(d.매출)}만<small>${d.주문}건 · ${(d.매출/total*100).toFixed(1)}%</small></div></div>`;
+    const ys=Object.keys(d.years).sort();
+    if(ys.length>1) ys.forEach(y=>{const yd=d.years[y]; h+=`<div class="srow sub"><div>└ ${y}년</div><div class="bar"><i style="width:${yd.매출/max*100}%"></i></div><div class="vl">${man(yd.매출)}만<small>${yd.주문}건</small></div></div>`;});
+  });
+  if(agg['상시']){const d=agg['상시']; h+=`<div class="srow"><div class="nm">상시<small>기본·프리미엄·개별포장·단품</small></div>
+      <div class="grp" style="color:var(--text-3);font-size:12px">시즌 외 나머지 매출</div><div class="vl">${man(d.매출)}만<small>${d.주문}건 · ${(d.매출/total*100).toFixed(1)}%</small></div></div>`;}
+  $('#seasonList').innerHTML=h||'<p class="desc">이 기간에는 시즌 포장 판매가 없습니다</p>';
+}
+
+// ── 대량 주문 의존도 ─────────────────────────────────
+let bigShowAll=false;
+function renderBig(rows){
+  $('#bigRange').textContent=`(${labLong(rows[0].ym)} ~ ${labLong(rows[rows.length-1].ym)})`;
+  const S=rows.reduce((a,r)=>a+r.매출,0), B=rows.reduce((a,r)=>a+r.대량매출,0);
+  const O=rows.reduce((a,r)=>a+r.주문건수,0), BO=rows.reduce((a,r)=>a+r.대량건수,0);
+  const closed=rows.filter(r=>!isPartial(r));
+  const normAvg=closed.length? closed.reduce((a,r)=>a+r.매출-r.대량매출,0)/closed.length : 0;
+  const overBep=closed.filter(r=>r.매출-r.대량매출>=META.BEP).length, overAll=closed.filter(r=>r.매출>=META.BEP).length;
+  $('#bigStats').innerHTML=`
+    <div><span class="lb">대량 주문</span><b>${BO}건</b><small>전체 ${O}건 중 ${(O?BO/O*100:0).toFixed(1)}%</small></div>
+    <div><span class="lb">대량 주문 매출 비중</span><b>${(S?B/S*100:0).toFixed(1)}%</b><small>${man(B)}만 / ${man(S)}만</small></div>
+    <div><span class="lb">평소 월평균 매출</span><b>${man(normAvg)}만</b><small>대량 주문 제외 · 마감 월 기준</small></div>
+    <div><span class="lb">BEP 넘은 달</span><b>${overBep} / ${closed.length}개월</b><small>일반 주문만 · 대량 포함 시 ${overAll}개월</small></div>`;
+  const bigAll=rows.filter(r=>r.대량건수>0).slice().reverse();
+  const bigM=bigShowAll?bigAll:bigAll.slice(0,6);
+  $('#bigMore').style.display=bigAll.length>6?'inline-block':'none';
+  $('#bigMore').textContent=bigShowAll?'최근 6개월만 보기 ▴':`전체 보기 (${bigAll.length}개월) ▾`;
+  $('#bigTable').innerHTML='<thead><tr><th>대량 주문이 있었던 달</th><th>건수</th><th>대량 매출</th><th>월 매출</th><th>비중</th><th>대량 제외 매출</th></tr></thead><tbody>'
+    + bigM.map(r=>`<tr><td>${labLong(r.ym)}${partialTag(r)}</td><td>${r.대량건수}</td><td>${won(r.대량매출)}</td><td>${won(r.매출)}</td><td>${(r.대량매출/r.매출*100).toFixed(0)}%</td>
+      <td class="${r.매출-r.대량매출<META.BEP?'neg':''}">${won(r.매출-r.대량매출)}</td></tr>`).join('')+'</tbody>';
+}
+
+// ── 연도별 같은 달 비교 ────────────────────────────────
+let yoyK='매출';
+function renderYoY(){
+  const years=[...new Set(DATA.map(r=>r.ym.slice(0,4)))].sort();
+  const cols=years.map((y,i)=>i===years.length-1?css('--sales'):i===years.length-2?css('--salesL'):css('--text-3'));
+  const M=[...Array(12)].map((_,i)=>String(i+1).padStart(2,'0'));
+  $('#yoyLegend').innerHTML=years.map((y,i)=>`<span><i style="background:${cols[i]}"></i>${y}년</span>`).join('');
+  const o=baseOpts(fmtMan); o.plugins.tooltip.callbacks.title=it=>it[0].label;
+  charts.push(new Chart($('#cYoy'),{type:'bar',data:{labels:M.map(m=>(+m)+'월'),datasets:years.map((y,i)=>({
+    ...bar(y+'년',M.map(m=>(BY_YM[y+m]&&y+m!==NOW_YM)?BY_YM[y+m][yoyK]:null),cols[i]),borderRadius:4}))},options:o}));
+  const has=ym=>BY_YM[ym]&&ym!==NOW_YM;          // 진행 중인 이번 달은 비교에서 제외
+  const both=M.filter(m=>years.length>1&&has(years[years.length-2]+m)&&has(years[years.length-1]+m));
+  $('#yoyDesc').innerHTML=`전체 기간 · 가로축 = 월, 막대 = 연도 (기간 버튼과 무관)`+(both.length?` · 두 해 모두 있는 달: ${both.map(m=>+m+'월').join('·')}`:'')
+    +(BY_YM[NOW_YM]?` · ${labLong(NOW_YM)}은 진행 중이라 제외`:'');
+}
+$('#bigMore').onclick=()=>{bigShowAll=!bigShowAll; render();};
+document.querySelectorAll('#yoyMetric button').forEach(b=>b.onclick=()=>{
+  yoyK=b.dataset.k; document.querySelectorAll('#yoyMetric button').forEach(x=>x.classList.toggle('on',x===b)); render();});
+
+// ── 고객 탭 ─────────────────────────────────────────
+const CUST = {"6": {"고객수": 54, "재구매고객": 14, "1인당": 59461}, "12": {"고객수": 157, "재구매고객": 36, "1인당": 68824}, "0": {"고객수": 204, "재구매고객": 50, "1인당": 63104}};
+const IN_GROUPS = ['네이버 검색','네이버쇼핑 외','마케팅 링크','네이버페이·홈','장바구니·기타'];
+const IN_COLORS = ['--c1','--c2','--c3','--c4','--c5'];
+function renderCust(rows){
+  const cs=CUST[String(range)]||CUST['0'];
+  const S=rows.reduce((a,r)=>a+r.매출,0), RS=rows.reduce((a,r)=>a+r.재구매매출,0);
+  const last=rows[rows.length-1];
+  $('#custKpis').innerHTML=[
+    ['구매 고객 수',won(cs.고객수),'명',`기간 내 중복 제외 · ${labLong(last.ym)} ${last.고객수}명`],
+    ['재구매 고객 비율',(cs.고객수?cs.재구매고객/cs.고객수*100:0).toFixed(1),'%',`${cs.재구매고객}명 (2회 이상 주문)`],
+    ['1인당 구매금액',man(cs['1인당']),'만원',`주문 1건당(객단가)과 다름`],
+    ['재구매 주문 매출 비중',(S?RS/S*100:0).toFixed(1),'%',`두 번째 이후 주문 매출 ${man(RS)}만`],
+  ].map(k=>`<div class="card kpi"><div class="label">${k[0]}</div><div class="value">${k[1]}<small>${k[2]}</small></div><div class="sub">${k[3]}</div></div>`).join('');
+  const L=rows.map(r=>lab(r.ym));
+  const o=baseOpts((v,f)=>v+(f?'명':'')); o.scales.x.stacked=true; o.scales.y.stacked=true;
+  charts.push(new Chart($('#cCust'),{type:'bar',data:{labels:L,datasets:[
+    bar('신규 고객',g2(rows,'신규고객'),css('--c1'),'c'),bar('재구매 고객',g2(rows,'재구매고객'),css('--c4'),'c')]},options:o}));
+  // 유입 경로 합계
+  const agg=Object.fromEntries(IN_GROUPS.map(g=>[g,{주문:0,매출:0}]));
+  rows.forEach(r=>IN_GROUPS.forEach(g=>{const d=(r.유입||{})[g]; if(d){agg[g].주문+=d.주문; agg[g].매출+=d.매출;}}));
+  const TO=IN_GROUPS.reduce((a,g)=>a+agg[g].주문,0), mx=Math.max(1,...IN_GROUPS.map(g=>agg[g].매출));
+  $('#inRange').textContent=`(${labLong(rows[0].ym)} ~ ${labLong(last.ym)})`;
+  $('#inflowList').innerHTML=IN_GROUPS.slice().sort((a,b)=>agg[b].매출-agg[a].매출).map(g=>{const d=agg[g];
+    return `<div class="srow"><div class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;background:var(${IN_COLORS[IN_GROUPS.indexOf(g)]})"></i>${g}<small>평균 주문 ${d.주문?man(d.매출/d.주문):0}만</small></div>
+      <div class="bar"><i style="width:${d.매출/mx*100}%;background:var(${IN_COLORS[IN_GROUPS.indexOf(g)]})"></i></div>
+      <div class="vl">${man(d.매출)}만<small>${d.주문}건 · ${(S?d.매출/S*100:0).toFixed(1)}%</small></div></div>`;}).join('');
+  const mk=rows.reduce((a,r)=>a+r.마케팅,0), ml=agg['마케팅 링크'].매출;
+  $('#mktEff').innerHTML= mk>0 ? `마케팅 효율: 마케팅 링크 매출 <b>${man(ml)}만</b> ÷ 마케팅비 <b>${man(mk)}만</b> = <b>${(ml/mk).toFixed(1)}배</b>
+      <br><small>인스타 광고처럼 마케팅 링크를 거치지 않은 효과는 포함되지 않습니다</small>`
+    : `마케팅 링크 매출 <b>${man(ml)}만</b> · 이 기간 마케팅비 입력 없음 (수동입력.xlsx 변동비 '마케팅')`;
+  const oi=baseOpts((v,f)=>v+(f?'건':'')); oi.scales.x.stacked=true; oi.scales.y.stacked=true;
+  $('#inLegend').innerHTML=IN_GROUPS.map((g,i)=>`<span><i style="background:var(${IN_COLORS[i]})"></i>${g}</span>`).join('');
+  charts.push(new Chart($('#cInflow'),{type:'bar',data:{labels:L,datasets:IN_GROUPS.map((g,i)=>
+    bar(g,rows.map(r=>((r.유입||{})[g]||{}).주문||0),css(IN_COLORS[i]),'i'))},options:oi}));
+  $('#custTable').innerHTML='<thead><tr><th>월</th><th>구매 고객</th><th>신규</th><th>재구매</th><th>매출</th><th>1인당 구매금액</th>'+IN_GROUPS.map(g=>`<th>${g}</th>`).join('')+'</tr></thead><tbody>'
+    + rows.slice().reverse().map(r=>`<tr><td>${labLong(r.ym)}${partialTag(r)}</td><td>${r.고객수}</td><td>${r.신규고객}</td><td>${r.재구매고객}</td><td>${won(r.매출)}</td><td>${r.고객수?won(r.매출/r.고객수):0}</td>`
+      + IN_GROUPS.map(g=>`<td>${((r.유입||{})[g]||{}).주문||0}</td>`).join('')+'</tr>').join('')+'</tbody>';
+}
+
+function render(){
+  const rows = range? DATA.slice(-range) : DATA;
+  renderSeason(rows); renderBig(rows);
+  renderCum();
+  renderKpis(rows); renderBreakdown(rows); renderTable(rows);
+  $('#viewDash').hidden = view!=='dash'; $('#viewCost').hidden = view!=='cost'; $('#viewCust').hidden = view!=='cust';
+  renderCharts(rows); renderCumChart(); renderYoY(); renderCust(rows);
+  renderCostNow(); renderCostRate(rows); renderCostMonthly(rows); renderCostHist();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  view=t.dataset.view;
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  render(); window.scrollTo(0,0);
+});
+// 기간 필터 (대시보드·원가표 두 곳, 서로 동기화)
+document.querySelectorAll('.range-seg button').forEach(b=>b.onclick=()=>{
+  range=+b.dataset.n;
+  document.querySelectorAll('.range-seg button').forEach(x=>x.classList.toggle('on',+x.dataset.n===range));
+  render();});
+$('#theme').onclick=()=>{
+  const r=document.documentElement, dark=r.dataset.theme? r.dataset.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme = dark?'light':'dark'; render();};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
+Chart.defaults.font.family='"Noto Sans KR",system-ui,sans-serif'; Chart.defaults.font.size=12;
+function renderAlerts(){
+  if(!ALERTS.length){ $('#alerts').innerHTML=''; return; }
+  const err=ALERTS.filter(a=>a.level==='error').length, esc=t=>t.replace(/[<>&]/g,'');
+  $('#alerts').innerHTML=`<details class="alert ${err?'error':'warn'}"${err?' open':''}>
+    <summary><b>${[err?'⛔ 오류 '+err+'건':'', ALERTS.length-err?'⚠ 확인 필요 '+(ALERTS.length-err)+'건':''].filter(Boolean).join(' · ')}</b>
+      <span class="al-first">${esc(ALERTS[0].text)}</span><span class="al-more">펼치기 ▾</span></summary>
+    <ul>${ALERTS.map(a=>`<li class="${a.level}">${a.level==='error'?'⛔':'⚠'} ${esc(a.text)}</li>`).join('')}</ul></details>`;
+}
+renderMeta(); renderMetaLabels(); renderAlerts(); render();
+</script>
+</body>
+</html>
